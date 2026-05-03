@@ -6,12 +6,12 @@ services:
       dockerfile: Dockerfile
     container_name: nyaovo-random-image-api
     ports:
-      - "3000:3000"
+      - "3400:3000"
     volumes:
       - ./images:/app/public/images
     environment:
       PORT: 3000
-      PUBLIC_BASE_URL: http://localhost:3000
+      PUBLIC_BASE_URL: http://localhost:3400
       IMAGE_ROOT: public/images
       CACHE_TTL_SECONDS: 60
       RATE_LIMIT_WINDOW_MS: 60000
