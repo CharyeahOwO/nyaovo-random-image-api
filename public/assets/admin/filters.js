@@ -15,6 +15,7 @@ export function initFilters({ updateBatchState }) {
   let visibleImageLimit = imagePageSize;
   let filterLoading = false;
   let currentPathSearch = `${window.location.pathname}${window.location.search}`;
+  let currentPage = 1;
 
   function rememberFilters() {
     const adminPath = window.location.pathname;
@@ -57,9 +58,69 @@ export function initFilters({ updateBatchState }) {
     });
   }
 
+  function renderPagination(total) {
+    const totalPages = Math.ceil(total / imagePageSize);
+    let paginationRow = document.querySelector('.pagination-row');
+    if (!paginationRow) {
+      paginationRow = document.createElement('div');
+      paginationRow.className = 'pagination-row';
+      const loadMoreRow = document.querySelector('.load-more-row');
+      if (loadMoreRow) loadMoreRow.parentNode.insertBefore(paginationRow, loadMoreRow);
+    }
+
+    if (totalPages <= 1) {
+      paginationRow.innerHTML = '';
+      return;
+    }
+
+    let html = '';
+    html += `<button data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''}>\u25C0</button>`;
+
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    if (start > 1) {
+      html += `<button data-page="1">1</button>`;
+      if (start > 2) html += `<span style="color:var(--muted)">...</span>`;
+    }
+
+    for (let i = start; i <= end; i++) {
+      html += `<button data-page="${i}" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+    }
+
+    if (end < totalPages) {
+      if (end < totalPages - 1) html += `<span style="color:var(--muted)">...</span>`;
+      html += `<button data-page="${totalPages}">${totalPages}</button>`;
+    }
+
+    html += `<button data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''}>\u25B6</button>`;
+
+    paginationRow.innerHTML = html;
+
+    paginationRow.querySelectorAll('button[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const page = parseInt(btn.dataset.page, 10);
+        if (page >= 1 && page <= totalPages) {
+          currentPage = page;
+          visibleImageLimit = page * imagePageSize;
+          applyImageFilters({ resetPage: false });
+          const section = document.getElementById('images');
+          if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  }
+
   function applyImageFilters({ resetPage = true } = {}) {
     if (!imageGrid) return;
-    if (resetPage) visibleImageLimit = imagePageSize;
+    if (resetPage) {
+      visibleImageLimit = imagePageSize;
+      currentPage = 1;
+    }
 
     const query = (imageSearch?.value || '').trim().toLowerCase();
     const cards = $$('.image-card', imageGrid);
@@ -87,6 +148,7 @@ export function initFilters({ updateBatchState }) {
       loadMoreStatus.textContent = hasMore ? `还有 ${matched.length - visibleImageLimit} 张` : matched.length ? '已全部显示' : '无匹配图片';
     }
 
+    renderPagination(matched.length);
     updateBatchState?.();
   }
 
@@ -113,6 +175,7 @@ export function initFilters({ updateBatchState }) {
       filters.innerHTML = nextFilters.innerHTML;
       imageGrid.innerHTML = nextGrid.innerHTML;
       visibleImageLimit = imagePageSize;
+      currentPage = 1;
       applyImageFilters();
 
       if (push) {
@@ -159,6 +222,7 @@ export function initFilters({ updateBatchState }) {
 
   loadMoreImages?.addEventListener('click', () => {
     visibleImageLimit += imagePageSize;
+    currentPage = Math.ceil(visibleImageLimit / imagePageSize);
     applyImageFilters({ resetPage: false });
   });
 

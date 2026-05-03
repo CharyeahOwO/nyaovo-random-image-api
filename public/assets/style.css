@@ -2387,3 +2387,60 @@ input[type="file"] {
     font-size: 0.85rem;
   }
 }
+
+/* Pagination numbers */
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.pagination-row button {
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.pagination-row button.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.pagination-row button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Collapsible sections */
+.collapsed {
+  display: none;
+}
+
+.images-toggle-btn {
+  width: 100%;
+  margin: 10px 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  border-style: dashed;
+}
+
+@media (max-width: 768px) {
+  .load-more-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .pagination-row button {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 0.9rem;
+  }
+}
