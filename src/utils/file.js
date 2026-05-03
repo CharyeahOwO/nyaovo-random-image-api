@@ -50,6 +50,18 @@ export function normalizeDetectedExtension(ext) {
   return ext === 'jpeg' ? 'jpg' : ext;
 }
 
+export function decodeUploadName(name = '') {
+  if (/[\u3400-\u9FFF]/.test(name)) return name;
+  try {
+    const decoded = Buffer.from(name, 'latin1').toString('utf8');
+    if (decoded.includes('\uFFFD')) return name;
+    if (/[\u3400-\u9FFF]/.test(decoded)) return decoded;
+    return decoded === name ? name : decoded;
+  } catch {
+    return name;
+  }
+}
+
 export async function detectImageType(buffer, originalName) {
   const originalExt = getOriginalExtension(originalName);
   if (!allowedImageExtensions.has(originalExt)) {
@@ -67,12 +79,13 @@ export async function detectImageType(buffer, originalName) {
     throw new Error('不支持的真实图片类型');
   }
 
-  const allowedOriginalExts = detectedExt === 'jpg' ? ['jpg', 'jpeg'] : [detectedExt];
-  if (!allowedOriginalExts.includes(originalExt)) {
-    throw new Error('文件扩展名与真实图片类型不匹配');
-  }
-
-  return { ext: detectedExt, mime: detected.mime };
+  const originalGroup = originalExt === 'jpeg' ? 'jpg' : originalExt;
+  return {
+    ext: detectedExt,
+    mime: detected.mime,
+    originalExt,
+    extensionCorrected: originalGroup !== detectedExt
+  };
 }
 
 export function createSafeFilename(ext) {

@@ -10,6 +10,7 @@ import {
   assertSafeDevice,
   assertSafeGallery,
   createSafeFilename,
+  decodeUploadName,
   detectImageType,
   ensureDir,
   formatBytes,
@@ -248,14 +249,16 @@ export function createAdminRouter(store) {
       await ensureDir(targetDir);
 
       for (const file of req.files || []) {
+        const originalName = decodeUploadName(file.originalname);
         try {
-          const detected = await detectImageType(file.buffer, file.originalname);
+          const detected = await detectImageType(file.buffer, originalName);
           const filename = createSafeFilename(detected.ext);
           const target = safeJoin(targetDir, filename);
           await fs.writeFile(target, file.buffer, { flag: 'wx', mode: 0o644 });
-          results.success.push(filename);
+          const note = detected.extensionCorrected ? `（已按真实格式保存为 .${detected.ext}）` : '';
+          results.success.push(`${filename}${note}`);
         } catch (error) {
-          results.failed.push(`${file.originalname}: ${error.message}`);
+          results.failed.push(`${originalName}: ${error.message}`);
         }
       }
 

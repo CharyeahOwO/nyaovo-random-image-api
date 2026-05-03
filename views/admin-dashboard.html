@@ -48,23 +48,28 @@
 
         <article class="panel">
           <h2>上传图片</h2>
-          <form method="post" action="{{adminPath}}/upload?_csrf={{csrfToken}}" enctype="multipart/form-data" class="stack-form">
-            <label>
-              图库
-              <select name="gallery" required>{{galleryOptions}}</select>
+          <form id="uploadForm" method="post" action="{{adminPath}}/upload?_csrf={{csrfToken}}" enctype="multipart/form-data" class="stack-form upload-form">
+            <div class="upload-controls">
+              <label>
+                图库
+                <select name="gallery" required>{{galleryOptions}}</select>
+              </label>
+              <label>
+                类型
+                <select name="device" required>
+                  <option value="pc">pc 横屏图</option>
+                  <option value="mobile">mobile 竖屏图</option>
+                </select>
+              </label>
+            </div>
+            <label class="drop-zone" id="dropZone">
+              <input id="fileInput" type="file" name="images" accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif" multiple>
+              <strong>点击选择图片，或拖拽到这里</strong>
+              <span>支持 jpg、jpeg、png、webp、gif、avif；最多 {{maxUploadFiles}} 张，单张 {{maxFileSizeMb}}MB。扩展名不准时会按真实图片格式保存。</span>
             </label>
-            <label>
-              类型
-              <select name="device" required>
-                <option value="pc">pc 横屏图</option>
-                <option value="mobile">mobile 竖屏图</option>
-              </select>
-            </label>
-            <label>
-              图片
-              <input type="file" name="images" accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif" multiple required>
-            </label>
-            <button type="submit">上传</button>
+            <div id="uploadMessage" class="upload-message" hidden></div>
+            <div id="fileList" class="selected-files" hidden></div>
+            <button id="uploadSubmit" type="submit">上传图片</button>
           </form>
         </article>
       </section>
