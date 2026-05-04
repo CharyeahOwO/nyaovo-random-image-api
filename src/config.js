@@ -33,6 +33,13 @@ export const config = {
   corsOrigin: process.env.CORS_ORIGIN || '*'
 };
 
+if (config.adminPassword === 'changeme') {
+  console.warn('⚠️ 安全警告：正在使用默认密码 ADMIN_PASSWORD=changeme，请通过环境变量修改！');
+}
+if (config.sessionSecret === 'please-change-this') {
+  console.warn('⚠️ 安全警告：正在使用默认 SESSION_SECRET，请通过环境变量修改！');
+}
+
 export const deviceNames = ['pc', 'mobile'];
 export const allowedImageExtensions = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']);
 export const galleryNamePattern = /^[a-z0-9_-]+$/;

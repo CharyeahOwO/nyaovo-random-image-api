@@ -17,7 +17,8 @@ async function getImageDimensions(absolutePath) {
     const dimensions = imageSize(buffer);
     if (!dimensions?.width || !dimensions?.height) return { width: null, height: null };
     return { width: dimensions.width, height: dimensions.height };
-  } catch {
+  } catch (error) {
+    console.warn(`getImageDimensions failed for ${absolutePath}:`, error.message);
     return { width: null, height: null };
   }
 }
@@ -36,15 +37,19 @@ const emptyStats = () => ({
   generatedAt: new Date().toISOString()
 });
 
+const galleriesJsonPath = () => path.join(config.imageRoot, 'galleries.json');
+
 export class ImageStore {
   constructor() {
     this.cache = emptyStats();
     this.lastRefreshMs = 0;
     this.refreshing = null;
+    this.galleryLabels = {};
   }
 
   async init() {
     await ensureDir(config.imageRoot);
+    await this.loadGalleryLabels();
     await this.refresh();
     this.timer = setInterval(() => {
       this.refresh().catch((error) => console.error('refresh image cache failed:', error));
@@ -59,6 +64,19 @@ export class ImageStore {
     }
   }
 
+  async loadGalleryLabels() {
+    try {
+      const data = await fs.readFile(galleriesJsonPath(), 'utf-8');
+      this.galleryLabels = JSON.parse(data);
+    } catch {
+      this.galleryLabels = {};
+    }
+  }
+
+  async saveGalleryLabels() {
+    await fs.writeFile(galleriesJsonPath(), JSON.stringify(this.galleryLabels, null, 2), 'utf-8');
+  }
+
   async getStats() {
     if (Date.now() - this.lastRefreshMs > config.cacheTtlSeconds * 1000) {
       await this.refresh();
@@ -68,7 +86,8 @@ export class ImageStore {
 
   async refresh() {
     if (this.refreshing) return this.refreshing;
-    this.refreshing = this.scan()
+    this.refreshing = this.loadGalleryLabels()
+      .then(() => this.scan())
       .then((stats) => {
         this.cache = stats;
         this.lastRefreshMs = Date.now();
@@ -81,6 +100,7 @@ export class ImageStore {
   }
 
   async scan() {
+    console.time('scan');
     await ensureDir(config.imageRoot);
     const entries = await fs.readdir(config.imageRoot, { withFileTypes: true }).catch((error) => {
       if (error.code !== 'ENOENT') console.error('readdir failed:', error);
@@ -93,7 +113,7 @@ export class ImageStore {
       if (!entry.isDirectory() || !isValidGalleryName(entry.name)) continue;
       const gallery = entry.name;
       const galleryDir = safeJoin(config.imageRoot, gallery);
-      const galleryStats = { name: gallery, total: 0, pc: 0, mobile: 0 };
+      const galleryStats = { name: gallery, label: this.galleryLabels[gallery]?.label || '', total: 0, pc: 0, mobile: 0 };
 
       for (const device of deviceNames) {
         const deviceDir = safeJoin(galleryDir, device);
@@ -139,6 +159,7 @@ export class ImageStore {
 
     galleries.sort((a, b) => a.name.localeCompare(b.name));
     images.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    console.timeEnd('scan');
     return {
       imageCount: images.length,
       galleryCount: galleries.length,
@@ -148,10 +169,14 @@ export class ImageStore {
     };
   }
 
-  async ensureGallery(gallery) {
+  async ensureGallery(gallery, label = '') {
     assertSafeGallery(gallery);
     const galleryDir = safeJoin(config.imageRoot, gallery);
     await Promise.all(deviceNames.map((device) => ensureDir(safeJoin(galleryDir, device))));
+    if (label) {
+      this.galleryLabels[gallery] = { label };
+      await this.saveGalleryLabels();
+    }
     await this.refresh();
     return gallery;
   }
@@ -170,6 +195,8 @@ export class ImageStore {
     const remaining = await fs.readdir(galleryDir).catch(() => []);
     if (remaining.length > 0) throw new Error('图库目录不为空，无法删除');
     await fs.rmdir(galleryDir);
+    delete this.galleryLabels[gallery];
+    await this.saveGalleryLabels();
     await this.refresh();
   }
 
@@ -211,12 +238,12 @@ export class ImageStore {
     return targetFilename;
   }
 
-  async batchDelete(images) {
+  async #batchExecute(images, actionFn) {
     let success = 0;
     const failed = [];
     for (const image of images) {
       try {
-        await this.deleteImage(image);
+        await actionFn(image);
         success += 1;
       } catch (error) {
         failed.push(`${image.filename || 'unknown'}: ${error.message}`);
@@ -224,51 +251,22 @@ export class ImageStore {
     }
     await this.refresh();
     return { success, failed };
+  }
+
+  async batchDelete(images) {
+    return this.#batchExecute(images, (img) => this.deleteImage(img));
   }
 
   async batchMove(images, { targetGallery, targetDevice }) {
-    let success = 0;
-    const failed = [];
-    for (const image of images) {
-      try {
-        await this.moveImage({ ...image, targetGallery, targetDevice });
-        success += 1;
-      } catch (error) {
-        failed.push(`${image.filename || 'unknown'}: ${error.message}`);
-      }
-    }
-    await this.refresh();
-    return { success, failed };
+    return this.#batchExecute(images, (img) => this.moveImage({ ...img, targetGallery, targetDevice }));
   }
 
   async batchChangeDevice(images, targetDevice) {
-    let success = 0;
-    const failed = [];
-    for (const image of images) {
-      try {
-        await this.moveImage({ ...image, targetGallery: image.gallery, targetDevice });
-        success += 1;
-      } catch (error) {
-        failed.push(`${image.filename || 'unknown'}: ${error.message}`);
-      }
-    }
-    await this.refresh();
-    return { success, failed };
+    return this.#batchExecute(images, (img) => this.moveImage({ ...img, targetGallery: img.gallery, targetDevice }));
   }
 
   async batchChangeGallery(images, targetGallery) {
-    let success = 0;
-    const failed = [];
-    for (const image of images) {
-      try {
-        await this.moveImage({ ...image, targetGallery, targetDevice: image.device });
-        success += 1;
-      } catch (error) {
-        failed.push(`${image.filename || 'unknown'}: ${error.message}`);
-      }
-    }
-    await this.refresh();
-    return { success, failed };
+    return this.#batchExecute(images, (img) => this.moveImage({ ...img, targetGallery, targetDevice: img.device }));
   }
 
   async listImages({ gallery, device, limit } = {}) {

@@ -152,10 +152,17 @@
             <h2>图库</h2>
             <span>仅可删除空图库</span>
           </div>
-          <form method="post" action="{{adminPath}}/galleries" class="inline-create">
+          <form method="post" action="{{adminPath}}/galleries" class="stack-form">
             <input type="hidden" name="_csrf" value="{{csrfToken}}">
-            <input name="gallery" placeholder="例如 luotianyi" pattern="[a-z0-9_-]+" required>
-            <button type="submit">创建</button>
+            <label>
+              备注（中文显示名称）
+              <input name="label" placeholder="例如 洛天依">
+            </label>
+            <label>
+              数据库名称（英文，用于API调用）
+              <input name="gallery" placeholder="例如 luotianyi" pattern="[a-z0-9_-]+" required>
+            </label>
+            <button type="submit">创建图库</button>
           </form>
           <div class="gallery-grid gallery-grid-compact">{{galleryCards}}</div>
         </article>

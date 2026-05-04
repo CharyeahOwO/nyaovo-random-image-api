@@ -20,6 +20,10 @@ import {
 } from '../utils/file.js';
 import { escapeHtml, renderView } from '../utils/response.js';
 
+function getGalleryDisplayName(gallery) {
+  return gallery.label || gallery.name;
+}
+
 const loginLimiter = rateLimit({
   windowMs: config.rateLimitWindowMs,
   limit: 8,
@@ -40,14 +44,18 @@ function galleryOptions(galleries, selected = '') {
   return galleries
     .map((gallery) => {
       const active = gallery.name === selected ? 'selected' : '';
-      return `<option value="${escapeHtml(gallery.name)}" ${active}>${escapeHtml(gallery.name)}</option>`;
+      const displayName = getGalleryDisplayName(gallery);
+      return `<option value="${escapeHtml(gallery.name)}" ${active}>${escapeHtml(displayName)}</option>`;
     })
     .join('');
 }
 
 function targetGalleryOptions(galleries) {
   return galleries
-    .map((gallery) => `<option value="${escapeHtml(gallery.name)}">${escapeHtml(gallery.name)}</option>`)
+    .map((gallery) => {
+      const displayName = getGalleryDisplayName(gallery);
+      return `<option value="${escapeHtml(gallery.name)}">${escapeHtml(displayName)}</option>`;
+    })
     .join('');
 }
 
@@ -57,16 +65,19 @@ function galleryCards(galleries, csrfToken, adminPath) {
   }
   return galleries
     .map((gallery) => {
+      const displayName = getGalleryDisplayName(gallery);
       const deleteButton =
         gallery.total === 0
-          ? `<form method="post" action="${adminPath}/galleries/delete" class="inline-form confirm-form" data-confirm="确定删除空图库 ${escapeHtml(gallery.name)} 吗？">
+          ? `<form method="post" action="${adminPath}/galleries/delete" class="inline-form confirm-form" data-confirm="确定删除空图库 ${escapeHtml(displayName)} 吗？">
               <input type="hidden" name="_csrf" value="${csrfToken}">
               <input type="hidden" name="gallery" value="${escapeHtml(gallery.name)}">
               <button class="danger" type="submit">删除空图库</button>
             </form>`
           : '<span class="muted">非空图库不可删除</span>';
+      const labelHtml = gallery.label ? `<p class="muted">${escapeHtml(gallery.name)}</p>` : '';
       return `<article class="stat-card">
-        <h3>${escapeHtml(gallery.name)}</h3>
+        <h3>${escapeHtml(displayName)}</h3>
+        ${labelHtml}
         <p><strong>${gallery.total}</strong> 张图片</p>
         <p>PC：${gallery.pc} / Mobile：${gallery.mobile}</p>
         ${deleteButton}
@@ -134,12 +145,13 @@ function imageCards(images, csrfToken, adminPath) {
 
 function filterLinks(galleries, currentGallery, currentDevice, adminPath) {
   const total = galleries.reduce((sum, gallery) => sum + gallery.total, 0);
-  const galleryLinks = [{ name: '全部图库', value: '', total }, ...galleries.map((gallery) => ({ name: gallery.name, value: gallery.name, total: gallery.total }))]
+  const galleryLinks = [{ name: '全部图库', label: '', value: '', total }, ...galleries.map((gallery) => ({ name: gallery.name, label: gallery.label || '', value: gallery.name, total: gallery.total }))]
     .map((gallery) => {
       const value = gallery.value;
       const active = (currentGallery || '') === value ? 'active' : '';
       const url = `${adminPath}?gallery=${encodeURIComponent(value)}&device=${encodeURIComponent(currentDevice || 'all')}`;
-      return `<a class="${active}" href="${url}">${escapeHtml(gallery.name)}(${gallery.total})</a>`;
+      const displayName = gallery.label || gallery.name;
+      return `<a class="${active}" href="${url}">${escapeHtml(displayName)}(${gallery.total})</a>`;
     })
     .join('');
   const source = currentGallery ? galleries.filter((gallery) => gallery.name === currentGallery) : galleries;
@@ -307,8 +319,9 @@ export function createAdminRouter(store) {
   router.post('/galleries', requireAdmin, async (req, res) => {
     try {
       const gallery = String(req.body.gallery || '').trim();
-      await store.ensureGallery(gallery);
-      req.session.flash = { type: 'success', text: `图库 ${gallery} 已创建` };
+      const label = String(req.body.label || '').trim();
+      await store.ensureGallery(gallery, label);
+      req.session.flash = { type: 'success', text: `图库 ${label || gallery} 已创建` };
     } catch (error) {
       req.session.flash = { type: 'error', text: error.message };
     }

@@ -22,12 +22,15 @@ function galleryRows(galleries) {
   }
   return galleries
     .map(
-      (gallery) => `<tr>
-        <td>${escapeHtml(gallery.name)}</td>
-        <td>${gallery.total}</td>
-        <td>${gallery.pc}</td>
-        <td>${gallery.mobile}</td>
-      </tr>`
+      (gallery) => {
+        const displayName = gallery.label || gallery.name;
+        return `<tr>
+          <td>${escapeHtml(displayName)}</td>
+          <td>${gallery.total}</td>
+          <td>${gallery.pc}</td>
+          <td>${gallery.mobile}</td>
+        </tr>`;
+      }
     )
     .join('');
 }
