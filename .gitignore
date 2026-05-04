@@ -156,3 +156,7 @@ public/images/**
 !public/images/**/
 !public/images/**/.gitkeep
 .tmp-uploads/
+
+# Test screenshots
+*.png
+!public/images/**/*.png
