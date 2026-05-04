@@ -25,28 +25,33 @@
 
 ## 部署
 
-### Docker（推荐）
+### Docker Hub 镜像（推荐）
 
-**docker compose（推荐）**
+镜像地址：`docker.io/charyeahowo/nyaovo-random-image-api:latest`
+
+每次 push 到 `main` 分支会通过 GitHub Actions 自动构建并推送。
+
+<details>
+<summary><b>docker compose 部署（点击展开）</b></summary>
 
 ```bash
-git clone https://github.com/user/nyaovo-random-image-api.git
-cd nyaovo-random-image-api
+# 下载配置文件
+curl -O https://raw.githubusercontent.com/charyeahowo/nyaovo-random-image-api/main/docker-compose.yml
 
-# 修改环境变量
-cp .env.example .env
-# 编辑 .env，至少修改 ADMIN_PASSWORD 和 SESSION_SECRET
+# 编辑 docker-compose.yml，修改 ADMIN_PASSWORD 和 SESSION_SECRET
 
-docker compose up -d --build
+# 启动
+docker compose up -d
 ```
 
 访问 `http://localhost:3400/image`，后台 `http://localhost:3400/image/admin`。
 
-**docker run**
+</details>
+
+<details>
+<summary><b>docker run 部署（点击展开）</b></summary>
 
 ```bash
-docker build -t nyaovo-random-image-api .
-
 docker run -d \
   --name nyaovo \
   -p 3400:3000 \
@@ -54,16 +59,45 @@ docker run -d \
   -e ADMIN_PASSWORD=your-password \
   -e SESSION_SECRET=your-secret \
   -e PUBLIC_BASE_URL=http://localhost:3400 \
-  nyaovo-random-image-api
+  --restart unless-stopped \
+  charyeahowo/nyaovo-random-image-api:latest
 ```
 
 > 挂载的 `images` 目录需要写权限，不要加 `:ro`。
 
-**1Panel 部署**
+</details>
+
+<details>
+<summary><b>本地构建部署（点击展开）</b></summary>
+
+```bash
+git clone https://github.com/charyeahowo/nyaovo-random-image-api.git
+cd nyaovo-random-image-api
+
+cp .env.example .env
+# 编辑 .env，至少修改 ADMIN_PASSWORD 和 SESSION_SECRET
+
+docker compose up -d --build
+```
+
+如需使用本地构建而非远程镜像，将 `docker-compose.yml` 中的 `image` 行替换为：
+
+```yaml
+build:
+  context: .
+  dockerfile: Dockerfile
+```
+
+</details>
+
+<details>
+<summary><b>1Panel 部署（点击展开）</b></summary>
 
 1. 新建 Docker Compose 编排，上传项目或 Git 拉取
-2. 使用项目自带 `docker-compose.yml`，修改环境变量
+2. 使用项目自带 `docker-compose.yml`，创建 `.env` 文件填写环境变量
 3. 启动后在 OpenResty / Nginx 配置反向代理绑定域名
+
+</details>
 
 ### 本地运行
 

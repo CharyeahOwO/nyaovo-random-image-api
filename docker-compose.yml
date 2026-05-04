@@ -1,9 +1,6 @@
 services:
   nyaovo-random-image-api:
-    image: nyaovo-random-image-api:latest
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: charyeahowo/nyaovo-random-image-api:latest
     container_name: nyaovo-random-image-api
     ports:
       - "3400:3000"
@@ -17,8 +14,8 @@ services:
       RATE_LIMIT_WINDOW_MS: 60000
       RATE_LIMIT_MAX: 120
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: changeme
-      SESSION_SECRET: please-change-this
+      ADMIN_PASSWORD: changeme          # ← 务必修改
+      SESSION_SECRET: please-change-this # ← 务必修改
       ADMIN_PATH: /image/admin
       MAX_FILE_SIZE_MB: 10
       MAX_UPLOAD_FILES: 20
