@@ -1,4 +1,4 @@
-# Nyaovo Random Image API
+# Random Image API
 
 [中文](./README.md) | [English](./README_en.md)
 
